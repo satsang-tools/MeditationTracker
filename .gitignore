@@ -1,0 +1,15 @@
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# Python (only used to regenerate icons)
+__pycache__/
+*.pyc
+
+# Claude Code local machine settings (keep launch.json shared)
+.claude/settings.local.json

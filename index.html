@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#15120D">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Sitting">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Sitting</title>
+<style>
+  :root{
+    --bg:#15120D;          /* deep warm near-black: a dark room */
+    --bg2:#1C1813;
+    --ink:#ECE3D2;         /* candlelight on a pale wall */
+    --muted:#8A8273;
+    --faint:#2E2820;       /* gridlines */
+    --flame:#E6A24C;       /* the single warm light */
+    --flame-dim:#B07C39;
+    --area-top:rgba(230,162,76,0.16);
+    --area-bot:rgba(230,162,76,0.0);
+    --glow:rgba(230,162,76,0.55);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;background:var(--bg);}
+  body{
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color:var(--ink);
+    overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none;
+  }
+  .app{
+    max-width:440px;
+    margin:0 auto;
+    min-height:100dvh;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:max(18px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    background:
+      radial-gradient(120% 60% at 50% 110%, rgba(230,162,76,0.05), transparent 70%),
+      var(--bg);
+  }
+
+  /* ---- chart (the hero) ---- */
+  .chart-wrap{
+    flex:0 0 auto;
+    padding-top:8px;
+  }
+  svg.chart{width:100%; height:auto; display:block; overflow:visible;}
+  .grid-line{stroke:var(--faint); stroke-width:1;}
+  .grid-base{stroke:#3a3328; stroke-width:1.25;}
+  .hour-label, .win-label{
+    fill:var(--muted);
+    font-size:11px;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-variant-numeric:tabular-nums;
+  }
+  .win-label{font-size:11.5px; letter-spacing:.02em;}
+  .area{fill:url(#areaGrad);}
+  .curve{
+    fill:none; stroke:var(--flame); stroke-width:2.25;
+    stroke-linejoin:round; stroke-linecap:round;
+    filter:url(#soft);
+  }
+  .node{fill:var(--bg); stroke:var(--flame); stroke-width:1.75;}
+  .node-today{fill:var(--flame); stroke:none;}
+
+  /* ---- the still middle ---- */
+  .middle{
+    flex:1 1 auto;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:22px;
+    min-height:160px;
+  }
+  .state-word{
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-size:17px;
+    letter-spacing:.18em;
+    text-transform:lowercase;
+    color:var(--muted);
+    height:20px;
+    opacity:0;
+    transition:opacity .6s ease;
+  }
+  .state-word.show{opacity:1;}
+  .hint{
+    font-family: ui-serif, Georgia, serif;
+    font-size:14px; color:var(--muted);
+    opacity:.0; transition:opacity .6s ease;
+    text-align:center; max-width:240px; line-height:1.5;
+    font-style:italic;
+  }
+  .hint.show{opacity:.7;}
+
+  /* ---- the control ---- */
+  .control{
+    appearance:none; border:none; cursor:pointer;
+    width:164px; height:164px; border-radius:50%;
+    background:transparent;
+    color:var(--ink);
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-size:22px; letter-spacing:.04em;
+    position:relative;
+    display:flex; align-items:center; justify-content:center;
+    transition:transform .25s ease;
+  }
+  .control:active{transform:scale(.97);}
+  .ring{
+    position:absolute; inset:0; border-radius:50%;
+    border:1.5px solid var(--flame-dim);
+    transition:border-color .5s ease, box-shadow .5s ease;
+  }
+  .control.running .ring{
+    border-color:var(--flame);
+    box-shadow:0 0 0 0 var(--glow);
+    animation:breathe 7s ease-in-out infinite;
+  }
+  .control .label{position:relative; z-index:1;}
+  .control:focus-visible{outline:2px solid var(--flame); outline-offset:6px;}
+  @keyframes breathe{
+    0%,100%{box-shadow:0 0 22px -8px var(--glow); border-color:var(--flame-dim);}
+    50%{box-shadow:0 0 46px 2px var(--glow); border-color:var(--flame);}
+  }
+
+  /* ---- quiet utility row ---- */
+  .util{
+    display:flex; justify-content:center; gap:26px;
+    padding-top:14px; min-height:18px;
+  }
+  .util button{
+    appearance:none; background:none; border:none; cursor:pointer;
+    color:var(--muted); opacity:.5;
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-size:11px; letter-spacing:.06em;
+    padding:4px 2px;
+    transition:opacity .2s, color .2s;
+  }
+  .util button:hover{opacity:.9;}
+  .util button.arm{color:var(--flame); opacity:.9;}
+  .util.hidden{visibility:hidden;}
+
+  @media (prefers-reduced-motion: reduce){
+    .control.running .ring{animation:none; box-shadow:0 0 26px -6px var(--glow);}
+    *{transition:none !important;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <div class="chart-wrap">
+    <svg class="chart" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet" aria-label="Practice curve">
+      <defs>
+        <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stop-color="var(--area-top)"/>
+          <stop offset="100%" stop-color="var(--area-bot)"/>
+        </linearGradient>
+        <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="0.4"/>
+        </filter>
+      </defs>
+      <g id="gridLayer"></g>
+      <path id="area" class="area" d=""></path>
+      <path id="curve" class="curve" d=""></path>
+      <g id="nodeLayer"></g>
+      <g id="winLayer"></g>
+    </svg>
+  </div>
+
+  <div class="middle">
+    <div id="stateWord" class="state-word">sitting</div>
+    <button id="control" class="control" aria-label="Begin sitting">
+      <span class="ring"></span>
+      <span class="label" id="ctrlLabel">Begin</span>
+    </button>
+    <div id="hint" class="hint">Press begin to start your first sitting.</div>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- persistent state (carries across sessions on-device) ----------
+  // Held in memory so rendering stays synchronous; written to localStorage on change.
+  // Time is timestamp-based, never counter-based: a sit stores its absolute start
+  // (Date.now()) and duration is always derived from wall-clock timestamps. This is
+  // what keeps a multi-hour sit exact across screen-off, backgrounding, or app eviction.
+  var K_STATE = "mt_state";
+  var state = { sessions: [], active: null };   // sessions:[{s:ms,e:ms}], active:startMs|null
+  var ready = false;
+
+  async function loadState(){
+    try{
+      var raw = localStorage.getItem(K_STATE);
+      if(raw){
+        var p = JSON.parse(raw);
+        state.sessions = Array.isArray(p.sessions) ? p.sessions : [];
+        state.active = (typeof p.active === "number") ? p.active : null;
+      }
+    }catch(e){
+      // key absent or unreadable -> fresh state
+      state.sessions = []; state.active = null;
+    }
+  }
+
+  function saveState(){
+    // best effort; UI does not block on the write
+    try{
+      localStorage.setItem(K_STATE, JSON.stringify({
+        sessions: state.sessions, active: state.active
+      }));
+    }catch(e){ /* storage full / unavailable -> best effort */ }
+  }
+
+  // ---------- the windows: avg hours/day over trailing N days ----------
+  var HOUR = 3600000, DAY = 86400000, TOP = 6, NWIN = 5;
+
+  function computeWindows(now){
+    var all = state.active ? state.sessions.concat([{s:state.active, e:now}]) : state.sessions;
+    var vals = [];                       // vals[0] = N=1 (today), vals[4] = N=5
+    for(var N=1; N<=NWIN; N++){
+      var cutoff = now - N*DAY, sum = 0;
+      for(var i=0;i<all.length;i++){
+        var a = Math.max(all[i].s, cutoff);
+        var b = Math.min(all[i].e, now);
+        if(b>a) sum += (b-a);
+      }
+      vals.push((sum/HOUR)/N);           // hours per day
+    }
+    return vals;
+  }
+
+  // ---------- chart geometry ----------
+  var W=360, H=300, padL=30, padR=14, padT=14, padB=30;
+  var plotW = W-padL-padR, plotH = H-padT-padB;
+  function xAt(i){ return padL + plotW*(i/(NWIN-1)); }        // i: 0=left(5d) .. 4=right(today)
+  function yAt(h){ var c=Math.max(0,Math.min(TOP,h)); return padT + plotH*(1 - c/TOP); }
+
+  // static grid + window labels (built once)
+  (function buildStatic(){
+    var g = document.getElementById("gridLayer");
+    for(var h=0; h<=TOP; h++){
+      var y = yAt(h);
+      var line = document.createElementNS("http://www.w3.org/2000/svg","line");
+      line.setAttribute("x1", padL); line.setAttribute("x2", W-padR);
+      line.setAttribute("y1", y); line.setAttribute("y2", y);
+      line.setAttribute("class", h===0 ? "grid-base":"grid-line");
+      g.appendChild(line);
+      if(h>0){
+        var t = document.createElementNS("http://www.w3.org/2000/svg","text");
+        t.setAttribute("x", padL-7); t.setAttribute("y", y+3.5);
+        t.setAttribute("text-anchor","end"); t.setAttribute("class","hour-label");
+        t.textContent = h;
+        g.appendChild(t);
+      }
+    }
+    var labels = ["5d","4d","3d","2d","1d"];  // left -> right
+    var wl = document.getElementById("winLayer");
+    for(var i=0;i<NWIN;i++){
+      var t2 = document.createElementNS("http://www.w3.org/2000/svg","text");
+      t2.setAttribute("x", xAt(i)); t2.setAttribute("y", H-padB+18);
+      t2.setAttribute("text-anchor","middle"); t2.setAttribute("class","win-label");
+      t2.textContent = labels[i];
+      wl.appendChild(t2);
+    }
+  })();
+
+  function smoothPath(pts){
+    if(pts.length<2) return "";
+    var d = "M "+pts[0].x+" "+pts[0].y;
+    for(var i=0;i<pts.length-1;i++){
+      var p0=pts[i-1]||pts[i], p1=pts[i], p2=pts[i+1], p3=pts[i+2]||p2;
+      var c1x=p1.x+(p2.x-p0.x)/6, c1y=p1.y+(p2.y-p0.y)/6;
+      var c2x=p2.x-(p3.x-p1.x)/6, c2y=p2.y-(p3.y-p1.y)/6;
+      d += " C "+c1x+" "+c1y+", "+c2x+" "+c2y+", "+p2.x+" "+p2.y;
+    }
+    return d;
+  }
+
+  var curveEl = document.getElementById("curve");
+  var areaEl  = document.getElementById("area");
+  var nodeLayer = document.getElementById("nodeLayer");
+
+  function drawVals(vals){
+    // vals[0]=today(N1) .. vals[4]=5d(N5); plot left->right as 5d..today
+    var pts = [];
+    for(var i=0;i<NWIN;i++){
+      var v = vals[NWIN-1-i];   // i=0 -> vals[4](5d) ... i=4 -> vals[0](today)
+      pts.push({x:xAt(i), y:yAt(v)});
+    }
+    var line = smoothPath(pts);
+    curveEl.setAttribute("d", line);
+    areaEl.setAttribute("d", line+" L "+pts[NWIN-1].x+" "+yAt(0)+" L "+pts[0].x+" "+yAt(0)+" Z");
+
+    nodeLayer.innerHTML = "";
+    for(var j=0;j<NWIN;j++){
+      var isToday = (j===NWIN-1);
+      var c = document.createElementNS("http://www.w3.org/2000/svg","circle");
+      c.setAttribute("cx", pts[j].x); c.setAttribute("cy", pts[j].y);
+      c.setAttribute("r", isToday ? 4.5 : 3);
+      c.setAttribute("class", isToday ? "node node-today" : "node");
+      nodeLayer.appendChild(c);
+    }
+  }
+
+  // ---------- animated rendering ----------
+  var disp = [0,0,0,0,0];
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  function render(animate){
+    var target = computeWindows(Date.now());
+    if(!animate || reduce){ disp = target.slice(); drawVals(disp); return; }
+    var from = disp.slice(), start = performance.now(), dur = 650;
+    function step(t){
+      var k = Math.min(1, (t-start)/dur);
+      var e = 1-Math.pow(1-k,3);            // easeOutCubic
+      for(var i=0;i<NWIN;i++) disp[i] = from[i] + (target[i]-from[i])*e;
+      drawVals(disp);
+      if(k<1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  // ---------- control / session ----------
+  var control = document.getElementById("control");
+  var ctrlLabel = document.getElementById("ctrlLabel");
+  var stateWord = document.getElementById("stateWord");
+  var hint = document.getElementById("hint");
+
+  function running(){ return state.active != null; }
+
+  function reflectState(){
+    var run = running();
+    control.classList.toggle("running", run);
+    ctrlLabel.textContent = run ? "Finish" : "Begin";
+    control.setAttribute("aria-label", run ? "Finish sitting" : "Begin sitting");
+    stateWord.classList.toggle("show", run);
+    var empty = state.sessions.length===0 && !run;
+    hint.classList.toggle("show", empty);
+  }
+
+  function begin(){
+    state.active = Date.now();
+    saveState();                 // persist start immediately: survives eviction mid-sit
+    reflectState(); render(true); pace();
+  }
+  function finish(){
+    if(state.active != null){
+      state.sessions.push({s:state.active, e:Date.now()});
+      state.active = null;
+      saveState();
+    }
+    reflectState(); render(true); pace();
+  }
+  control.addEventListener("click", function(){
+    if(!ready) return;
+    running() ? finish() : begin();
+  });
+
+  // ---------- live decay ticking ----------
+  // Note: this interval only triggers re-renders; it never accumulates elapsed time.
+  // If it is throttled or paused while backgrounded, recorded duration is unaffected.
+  var timer = null;
+  function pace(){
+    if(timer) clearInterval(timer);
+    timer = setInterval(function(){ render(true); }, running() ? 5000 : 30000);
+  }
+
+  // ---------- boot ----------
+  (async function(){
+    await loadState();
+    ready = true;
+    reflectState();
+    render(false);
+    pace();
+  })();
+
+  // recompute whenever the app is seen again, so the chart reflects real elapsed
+  // wall-clock time after a screen-off / backgrounded / bfcache-restored sit.
+  function resume(){
+    if(ready){ reflectState(); render(true); pace(); }
+  }
+  document.addEventListener("visibilitychange", function(){
+    if(!document.hidden) resume();
+  });
+  window.addEventListener("pageshow", resume);   // incl. back-forward cache restores
+  window.addEventListener("focus", resume);
+})();
+
+// ---------- PWA: register the service worker (offline + installable) ----------
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){ /* offline support is best-effort */ });
+  });
+}
+</script>
+</body>
+</html>
