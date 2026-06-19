@@ -176,7 +176,7 @@
       <span class="head-label">Hours a day</span>
       <span class="head-label">Last 5 days</span>
     </div>
-    <svg class="chart" viewBox="0 0 360 300" preserveAspectRatio="xMidYMid meet" aria-label="Practice curve">
+    <svg class="chart" viewBox="0 0 360 582" preserveAspectRatio="xMidYMid meet" aria-label="Practice curve">
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="var(--area-top)"/>
@@ -264,7 +264,9 @@
   }
 
   // ---------- chart geometry ----------
-  var W=360, H=300, padL=30, padR=14, padT=14, padB=30;
+  // The plotted frame is a golden rectangle: viewBox height / width = 1.618,
+  // so the chart renders 1.618x as tall as it is wide. The round control sits below it.
+  var W=360, H=582, padL=30, padR=14, padT=18, padB=34;
   var plotW = W-padL-padR, plotH = H-padT-padB;
   function xAt(i){ return padL + plotW*(i/(NWIN-1)); }        // i: 0=left(5d) .. 4=right(today)
   function yAt(h){ var c=Math.max(0,Math.min(TOP,h)); return padT + plotH*(1 - c/TOP); }

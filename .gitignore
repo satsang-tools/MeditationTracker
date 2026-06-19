@@ -25,3 +25,6 @@ __pycache__/
 # Design exports - not part of the app
 Blue-New-06-18-2026_11_57_PM.png
 HTML-file-shared-06-18-2026_11_48_PM.png
+
+# Local preview mocks - not part of the app
+preview/
