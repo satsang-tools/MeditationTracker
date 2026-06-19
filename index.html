@@ -19,7 +19,6 @@
     --muted:#7C766B;       /* quiet headers / day captions */
     --gold:#D6A24A;        /* warm light on the numerals */
     --gold-dim:#A9823C;
-    --word:#9C8862;        /* the faint "meditating" */
     --faint:#23262C;       /* gridlines */
     --grid-base:#2B2F36;
     --blue:#2E86FF;        /* the single electric current */
@@ -74,7 +73,7 @@
   .grid-base{stroke:var(--grid-base); stroke-width:1.25;}
   .tick{stroke:var(--gold-dim); stroke-width:1.25; opacity:.65;}
   .hour-label, .win-label{
-    fill:var(--gold);
+    fill:var(--ink);
     font-size:12.5px;
     font-family: ui-serif, Georgia, "Times New Roman", serif;
     font-variant-numeric:tabular-nums;
@@ -100,17 +99,6 @@
     justify-content:center;
     gap:22px;
   }
-  .state-word{
-    font-family: ui-serif, Georgia, "Times New Roman", serif;
-    font-size:17px;
-    letter-spacing:.22em;
-    text-transform:lowercase;
-    color:var(--word);
-    height:20px;
-    opacity:0;
-    transition:opacity .6s ease;
-  }
-  .state-word.show{opacity:1;}
   .hint{
     font-family: ui-serif, Georgia, serif;
     font-size:14px; color:var(--muted);
@@ -204,7 +192,6 @@
   </div>
 
   <div class="middle">
-    <div id="stateWord" class="state-word">meditating</div>
     <button id="control" class="control" aria-label="Begin sitting">
       <span class="ring"></span>
       <span class="label" id="ctrlLabel">Begin</span>
@@ -409,7 +396,6 @@
   // ---------- control / session ----------
   var control = document.getElementById("control");
   var ctrlLabel = document.getElementById("ctrlLabel");
-  var stateWord = document.getElementById("stateWord");
   var hint = document.getElementById("hint");
 
   function running(){ return state.active != null; }
@@ -419,7 +405,6 @@
     control.classList.toggle("running", run);
     ctrlLabel.textContent = run ? "Finish" : "Begin";
     control.setAttribute("aria-label", run ? "Finish sitting" : "Begin sitting");
-    stateWord.classList.toggle("show", run);
     var empty = state.sessions.length===0 && !run;
     hint.classList.toggle("show", empty);
   }
