@@ -72,6 +72,7 @@
   svg.chart{flex:1 1 auto; width:100%; height:100%; min-height:0; display:block; overflow:visible;}
   .grid-line{stroke:var(--faint); stroke-width:1;}
   .grid-base{stroke:var(--grid-base); stroke-width:1.25;}
+  .tick{stroke:var(--gold-dim); stroke-width:1.25; opacity:.65;}
   .hour-label, .win-label{
     fill:var(--gold);
     font-size:12.5px;
@@ -250,7 +251,10 @@
   }
 
   // ---------- the windows: avg hours/day over trailing N days ----------
-  var HOUR = 3600000, DAY = 86400000, TOP = 6, NWIN = 5;
+  // TOP (the vertical axis maximum, in hours) is not fixed: it adapts to the data
+  // so a few-minutes-a-day sitter and a several-hours-a-day sitter both get a
+  // readable curve. See computeTop().
+  var HOUR = 3600000, DAY = 86400000, TOP = 1, NWIN = 5;
 
   function computeWindows(now){
     var all = state.active ? state.sessions.concat([{s:state.active, e:now}]) : state.sessions;
@@ -265,6 +269,16 @@
       vals.push((sum/HOUR)/N);           // hours per day
     }
     return vals;
+  }
+
+  // The axis maximum, in whole hours: start at 1h, and step up by one whole hour
+  // as soon as ANY of the five averages meets or exceeds the current top. So the
+  // top is floor(maxAverage)+1 (min 1) — always leaving the curve some headroom.
+  // (The tiny epsilon makes a value that is exactly an hour count as "reaching" it.)
+  function computeTop(vals){
+    var m = 0;
+    for(var i=0;i<vals.length;i++){ if(vals[i] > m) m = vals[i]; }
+    return Math.max(1, Math.floor(m + 1e-9) + 1);
   }
 
   // ---------- chart geometry (responsive) ----------
@@ -298,6 +312,18 @@
         t.setAttribute("text-anchor","end"); t.setAttribute("class","hour-label");
         t.textContent = h;
         gridLayer.appendChild(t);
+      }
+    }
+    // 10-minute tick marks on the right edge — only meaningful on the 1-hour chart
+    if(TOP === 1){
+      for(var m=1; m<=5; m++){
+        var ty = yAt(m/6);                       // 10,20,30,40,50 minutes
+        var len = (m===3) ? 11 : 7;              // the half-hour tick is a touch longer
+        var tick = document.createElementNS("http://www.w3.org/2000/svg","line");
+        tick.setAttribute("x1", W-padR-len); tick.setAttribute("x2", W-padR);
+        tick.setAttribute("y1", ty); tick.setAttribute("y2", ty);
+        tick.setAttribute("class","tick");
+        gridLayer.appendChild(tick);
       }
     }
     var labels = ["5d","4d","3d","2d","1d"];  // left -> right
@@ -366,6 +392,8 @@
 
   function render(animate){
     var target = computeWindows(Date.now());
+    var newTop = computeTop(target);             // adapt the vertical scale to the data
+    if(newTop !== TOP){ TOP = newTop; buildGrid(); }
     if(!animate || reduce){ disp = target.slice(); drawVals(disp); return; }
     var from = disp.slice(), start = performance.now(), dur = 650;
     function step(t){

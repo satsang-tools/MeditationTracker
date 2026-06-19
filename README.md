@@ -2,6 +2,9 @@
 
 A quiet, single-screen timer for sitting practice. Press **Begin** to start a sit and
 **Finish** to end it; the curve shows your average hours/day over the trailing 1–5 days.
+The vertical scale adapts to your practice — it begins at one hour (with ten-minute ticks on
+the right) and steps up an hour at a time whenever any of the five averages reaches the top,
+so a few-minutes-a-day sitter and a several-hours-a-day sitter both get a readable curve.
 Built as an installable PWA — it runs full-screen on your phone and works offline, with all
 data kept locally on the device.
 
