@@ -268,6 +268,19 @@
     return Math.max(1, Math.floor(m + 1e-9) + 1);
   }
 
+  // We only need the trailing five-day window (the longest average the chart draws),
+  // and only to the nearest minute. So times are recorded rounded to the minute, and
+  // any session that ended more than five days ago is dropped — it can no longer
+  // affect any of the five averages.
+  var MIN = 60000;
+  function roundMin(t){ return Math.round(t/MIN)*MIN; }
+  function pruneOld(now){
+    var cutoff = now - NWIN*DAY;
+    var n = state.sessions.length;
+    state.sessions = state.sessions.filter(function(x){ return x.e > cutoff; });
+    if(state.sessions.length !== n) saveState();
+  }
+
   // ---------- chart geometry (responsive) ----------
   // The chart fills the top two-thirds of the screen and the control sits in the
   // bottom third, so the plot's aspect ratio adapts to each phone. Geometry is
@@ -417,9 +430,11 @@
   }
   function finish(){
     if(state.active != null){
-      state.sessions.push({s:state.active, e:Date.now()});
+      var now = Date.now();
+      state.sessions.push({ s: roundMin(state.active), e: roundMin(now) });
       state.active = null;
       saveState();
+      pruneOld(now);
     }
     reflectState(); render(true); pace();
   }
@@ -440,6 +455,7 @@
   // ---------- boot ----------
   (async function(){
     await loadState();
+    pruneOld(Date.now());   // drop anything older than the five-day window
     ready = true;
     reflectState();
     layout();          // measure the box and build the grid for this screen
@@ -457,7 +473,7 @@
   // recompute whenever the app is seen again, so the chart reflects real elapsed
   // wall-clock time after a screen-off / backgrounded / bfcache-restored sit.
   function resume(){
-    if(ready){ reflectState(); layout(); render(true); pace(); }
+    if(ready){ pruneOld(Date.now()); reflectState(); layout(); render(true); pace(); }
   }
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden) resume();

@@ -20,9 +20,12 @@ hold a Wake Lock — the screen is free to sleep.)
 
 ## Data
 
-All history lives in the browser's `localStorage` under the key `mt_state`
-(`{ sessions: [{s,e}], active: startMs|null }`). It is **per-device** — there is no account
-or cross-device sync. Clearing the browser/app data clears the history.
+History lives in the browser's `localStorage` under the key `mt_state`
+(`{ sessions: [{s,e}], active: startMs|null }`), with start/end times rounded to the nearest
+minute — minute resolution is all the chart needs. Only the trailing five days are retained
+(the longest average drawn), so any session that ended more than five days ago is pruned
+automatically on save, load, and resume. It is **per-device** — there is no account or
+cross-device sync. Clearing the browser/app data clears the history.
 
 ## Run locally
 
