@@ -301,11 +301,12 @@
         gridLayer.appendChild(t);
       }
     }
-    // 10-minute tick marks on the right edge — only meaningful on the 1-hour chart
-    if(TOP === 1){
+    // 10-minute tick marks on the right edge, kept at every 10 minutes for every
+    // hour no matter how tall the axis grows (the half-hour tick is a touch longer)
+    for(var hh=0; hh<TOP; hh++){
       for(var m=1; m<=5; m++){
-        var ty = yAt(m/6);                       // 10,20,30,40,50 minutes
-        var len = (m===3) ? 11 : 7;              // the half-hour tick is a touch longer
+        var ty = yAt(hh + m/6);                  // :10 :20 :30 :40 :50 within each hour
+        var len = (m===3) ? 11 : 7;
         var tick = document.createElementNS("http://www.w3.org/2000/svg","line");
         tick.setAttribute("x1", W-padR-len); tick.setAttribute("x2", W-padR);
         tick.setAttribute("y1", ty); tick.setAttribute("y2", ty);
