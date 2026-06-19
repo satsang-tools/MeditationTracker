@@ -41,22 +41,26 @@
   .app{
     max-width:440px;
     margin:0 auto;
-    min-height:100dvh;
-    min-height:100vh;
+    height:100vh;
+    height:100dvh;
     display:flex;
     flex-direction:column;
-    padding:max(18px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom));
+    padding:max(10px, env(safe-area-inset-top)) 20px max(12px, env(safe-area-inset-bottom));
     background:
       radial-gradient(120% 55% at 50% 112%, rgba(46,134,255,0.06), transparent 70%),
       var(--bg);
   }
 
-  /* ---- chart (the hero) ---- */
+  /* ---- chart (the hero): fills the top two-thirds of the screen ---- */
   .chart-wrap{
-    flex:0 0 auto;
-    padding-top:8px;
+    flex:0 0 66.667%;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    padding-top:6px;
   }
   .chart-head{
+    flex:0 0 auto;
     display:flex; justify-content:space-between; align-items:baseline;
     padding:0 4px 10px;
   }
@@ -65,7 +69,7 @@
     font-size:10.5px; letter-spacing:.22em; text-transform:uppercase;
     color:var(--muted);
   }
-  svg.chart{width:100%; height:auto; display:block; overflow:visible;}
+  svg.chart{flex:1 1 auto; width:100%; height:100%; min-height:0; display:block; overflow:visible;}
   .grid-line{stroke:var(--faint); stroke-width:1;}
   .grid-base{stroke:var(--grid-base); stroke-width:1.25;}
   .hour-label, .win-label{
@@ -85,15 +89,15 @@
   .node{fill:var(--bg); stroke:var(--blue); stroke-width:1.75;}
   .node-today{fill:var(--blue-soft); stroke:none; filter:url(#glow);}
 
-  /* ---- the still middle ---- */
+  /* ---- the still middle: the bottom third holds the control ---- */
   .middle{
-    flex:1 1 auto;
+    flex:0 0 33.333%;
+    min-height:0;
     display:flex;
     flex-direction:column;
     align-items:center;
     justify-content:center;
     gap:22px;
-    min-height:160px;
   }
   .state-word{
     font-family: ui-serif, Georgia, "Times New Roman", serif;
@@ -176,7 +180,7 @@
       <span class="head-label">Hours a day</span>
       <span class="head-label">Last 5 days</span>
     </div>
-    <svg class="chart" viewBox="0 0 360 582" preserveAspectRatio="xMidYMid meet" aria-label="Practice curve">
+    <svg class="chart" viewBox="0 0 360 480" preserveAspectRatio="none" aria-label="Practice curve">
       <defs>
         <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stop-color="var(--area-top)"/>
@@ -263,42 +267,60 @@
     return vals;
   }
 
-  // ---------- chart geometry ----------
-  // The plotted frame is a golden rectangle: viewBox height / width = 1.618,
-  // so the chart renders 1.618x as tall as it is wide. The round control sits below it.
-  var W=360, H=582, padL=30, padR=14, padT=18, padB=34;
-  var plotW = W-padL-padR, plotH = H-padT-padB;
-  function xAt(i){ return padL + plotW*(i/(NWIN-1)); }        // i: 0=left(5d) .. 4=right(today)
+  // ---------- chart geometry (responsive) ----------
+  // The chart fills the top two-thirds of the screen and the control sits in the
+  // bottom third, so the plot's aspect ratio adapts to each phone. Geometry is
+  // measured from the SVG's real pixel size and the viewBox is kept 1:1 with those
+  // pixels, so strokes and labels stay crisp and undistorted at any size.
+  var svgEl = document.querySelector("svg.chart");
+  var W=360, H=480, padL=28, padR=14, padT=12, padB=30;
+  var plotW, plotH;
+  function recalc(){ plotW = W-padL-padR; plotH = H-padT-padB; }
+  recalc();
+  function xAt(i){ return padL + plotW*(i/(NWIN-1)); }        // 0=left(5d) .. 4=right(today)
   function yAt(h){ var c=Math.max(0,Math.min(TOP,h)); return padT + plotH*(1 - c/TOP); }
 
-  // static grid + window labels (built once)
-  (function buildStatic(){
-    var g = document.getElementById("gridLayer");
+  // grid + axis labels, rebuilt whenever the chart is (re)sized
+  var gridLayer = document.getElementById("gridLayer");
+  var winLayer  = document.getElementById("winLayer");
+  function buildGrid(){
+    gridLayer.innerHTML = "";
     for(var h=0; h<=TOP; h++){
       var y = yAt(h);
       var line = document.createElementNS("http://www.w3.org/2000/svg","line");
       line.setAttribute("x1", padL); line.setAttribute("x2", W-padR);
       line.setAttribute("y1", y); line.setAttribute("y2", y);
       line.setAttribute("class", h===0 ? "grid-base":"grid-line");
-      g.appendChild(line);
+      gridLayer.appendChild(line);
       if(h>0){
         var t = document.createElementNS("http://www.w3.org/2000/svg","text");
         t.setAttribute("x", padL-7); t.setAttribute("y", y+3.5);
         t.setAttribute("text-anchor","end"); t.setAttribute("class","hour-label");
         t.textContent = h;
-        g.appendChild(t);
+        gridLayer.appendChild(t);
       }
     }
     var labels = ["5d","4d","3d","2d","1d"];  // left -> right
-    var wl = document.getElementById("winLayer");
+    winLayer.innerHTML = "";
     for(var i=0;i<NWIN;i++){
       var t2 = document.createElementNS("http://www.w3.org/2000/svg","text");
-      t2.setAttribute("x", xAt(i)); t2.setAttribute("y", H-padB+18);
+      t2.setAttribute("x", xAt(i)); t2.setAttribute("y", H-12);
       t2.setAttribute("text-anchor","middle"); t2.setAttribute("class","win-label");
       t2.textContent = labels[i];
-      wl.appendChild(t2);
+      winLayer.appendChild(t2);
     }
-  })();
+  }
+
+  // measure the SVG box, sync the viewBox to it (1:1 px), rebuild grid, redraw
+  function layout(){
+    var r = svgEl.getBoundingClientRect();
+    if(r.width < 2 || r.height < 2) return;
+    W = Math.round(r.width); H = Math.round(r.height);
+    recalc();
+    svgEl.setAttribute("viewBox", "0 0 "+W+" "+H);
+    buildGrid();
+    drawVals(disp);
+  }
 
   function smoothPath(pts){
     if(pts.length<2) return "";
@@ -406,14 +428,22 @@
     await loadState();
     ready = true;
     reflectState();
+    layout();          // measure the box and build the grid for this screen
     render(false);
     pace();
   })();
 
+  // re-measure when the viewport changes (rotation, resize, dynamic toolbars)
+  function relayout(){
+    requestAnimationFrame(function(){ layout(); render(true); });
+  }
+  window.addEventListener("resize", relayout);
+  window.addEventListener("orientationchange", function(){ setTimeout(relayout, 80); });
+
   // recompute whenever the app is seen again, so the chart reflects real elapsed
   // wall-clock time after a screen-off / backgrounded / bfcache-restored sit.
   function resume(){
-    if(ready){ reflectState(); render(true); pace(); }
+    if(ready){ reflectState(); layout(); render(true); pace(); }
   }
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden) resume();
