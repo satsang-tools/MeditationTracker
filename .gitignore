@@ -7,9 +7,21 @@ desktop.ini
 .vscode/
 .idea/
 
+# Dependencies and build output
+node_modules/
+dist/
+build/
+
+# Environment / secrets
+.env
+
+# Claude Code local machine settings
+.claude/settings.local.json
+
 # Python (only used to regenerate icons)
 __pycache__/
 *.pyc
 
-# Claude Code local machine settings (keep launch.json shared)
-.claude/settings.local.json
+# Design exports - not part of the app
+Blue-New-06-18-2026_11_57_PM.png
+HTML-file-shared-06-18-2026_11_48_PM.png
