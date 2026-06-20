@@ -155,6 +155,42 @@
   .util button.arm{color:var(--blue); opacity:.9;}
   .util.hidden{visibility:hidden;}
 
+  /* ---- the "long sit" decision overlay (forgotten Finish) ---- */
+  .phantom{
+    position:fixed; inset:0; z-index:50;
+    display:flex; align-items:center; justify-content:center;
+    padding:34px 28px;
+    background:rgba(8,10,14,0.88);
+    -webkit-backdrop-filter:blur(3px); backdrop-filter:blur(3px);
+    opacity:0; transition:opacity .35s ease;
+  }
+  .phantom[hidden]{display:none;}
+  .phantom.show{opacity:1;}
+  .phantom-card{
+    width:100%; max-width:340px; text-align:center;
+    display:flex; flex-direction:column; align-items:center; gap:16px;
+  }
+  .phantom-text{
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    font-size:20px; line-height:1.5; color:var(--ink); margin:0 0 4px;
+  }
+  .phantom-sub{
+    font-family: ui-serif, Georgia, serif; font-style:italic;
+    font-size:14.5px; line-height:1.5; color:var(--muted); margin:8px 0 0;
+  }
+  .pbtn{
+    appearance:none; cursor:pointer; width:100%;
+    font-family: ui-serif, Georgia, "Times New Roman", serif;
+    color:var(--ink); background:transparent;
+    border:1.5px solid var(--blue-dim); border-radius:40px;
+    padding:15px 20px; letter-spacing:.02em;
+    transition:border-color .3s ease, box-shadow .3s ease, transform .15s ease;
+  }
+  .pbtn:active{transform:scale(.98);}
+  .pbtn-primary{ font-size:19px; border-color:var(--blue); box-shadow:0 0 26px -10px var(--glow); }
+  .pbtn-secondary{ font-size:16px; opacity:.92; }
+  .pbtn:focus-visible{outline:2px solid var(--blue); outline-offset:4px;}
+
   @media (prefers-reduced-motion: reduce){
     .control.running .ring{animation:none; box-shadow:0 0 26px -6px var(--glow);}
     *{transition:none !important;}
@@ -201,6 +237,15 @@
 
 </div>
 
+<div id="phantom" class="phantom" role="dialog" aria-modal="true" aria-label="Record this sit" hidden>
+  <div class="phantom-card">
+    <p class="phantom-text">That was a long sit. Should I add this time to your log?</p>
+    <button id="recActual" class="pbtn pbtn-primary">Record <span id="recActualTime">0m</span></button>
+    <p class="phantom-sub">Or, if you stepped away and forgot to finish, log your average instead.</p>
+    <button id="recAvg" class="pbtn pbtn-secondary">Record <span id="recAvgTime">0m</span></button>
+  </div>
+</div>
+
 <script>
 (function(){
   "use strict";
@@ -211,7 +256,12 @@
   // (Date.now()) and duration is always derived from wall-clock timestamps. This is
   // what keeps a multi-hour sit exact across screen-off, backgrounding, or app eviction.
   var K_STATE = "mt_state";
-  var state = { sessions: [], active: null };   // sessions:[{s:ms,e:ms}], active:startMs|null
+  // sessions:[{s:ms,e:ms}], active:startMs|null
+  // savedAvg5d: the 5-day average (h/day) snapshotted when the current sit began,
+  //   so the "forgot to finish" check is never contaminated by the in-progress sit.
+  // pending: a frozen, undecided long sit awaiting the user's Record choice
+  //   ({start,end,baseline}) — survives reload so the choice can't be skipped.
+  var state = { sessions: [], active: null, savedAvg5d: null, pending: null };
   var ready = false;
 
   async function loadState(){
@@ -221,10 +271,12 @@
         var p = JSON.parse(raw);
         state.sessions = Array.isArray(p.sessions) ? p.sessions : [];
         state.active = (typeof p.active === "number") ? p.active : null;
+        state.savedAvg5d = (typeof p.savedAvg5d === "number") ? p.savedAvg5d : null;
+        state.pending = (p.pending && typeof p.pending === "object") ? p.pending : null;
       }
     }catch(e){
       // key absent or unreadable -> fresh state
-      state.sessions = []; state.active = null;
+      state.sessions = []; state.active = null; state.savedAvg5d = null; state.pending = null;
     }
   }
 
@@ -232,7 +284,8 @@
     // best effort; UI does not block on the write
     try{
       localStorage.setItem(K_STATE, JSON.stringify({
-        sessions: state.sessions, active: state.active
+        sessions: state.sessions, active: state.active,
+        savedAvg5d: state.savedAvg5d, pending: state.pending
       }));
     }catch(e){ /* storage full / unavailable -> best effort */ }
   }
@@ -274,6 +327,19 @@
   // affect any of the five averages.
   var MIN = 60000;
   function roundMin(t){ return Math.round(t/MIN)*MIN; }
+
+  // The 5-day average (hours/day) from stored sessions only — never the in-progress
+  // sit. Used as a fallback baseline when no snapshot was saved at begin().
+  function cleanFiveDay(now){
+    var cutoff = now - NWIN*DAY, sum = 0;
+    for(var i=0;i<state.sessions.length;i++){
+      var a = Math.max(state.sessions[i].s, cutoff);
+      var b = Math.min(state.sessions[i].e, now);
+      if(b>a) sum += (b-a);
+    }
+    return (sum/HOUR)/NWIN;
+  }
+
   function pruneOld(now){
     var cutoff = now - NWIN*DAY;
     var n = state.sessions.length;
@@ -424,24 +490,91 @@
   }
 
   function begin(){
-    state.active = Date.now();
+    var now = Date.now();
+    // snapshot the 5-day average before this sit exists, so the long-sit check and
+    // the "log your average" offer are never inflated by the sit in progress
+    state.savedAvg5d = computeWindows(now)[NWIN-1];
+    state.active = now;
     saveState();                 // persist start immediately: survives eviction mid-sit
     reflectState(); render(true); pace();
   }
   function finish(){
-    if(state.active != null){
-      var now = Date.now();
-      state.sessions.push({ s: roundMin(state.active), e: roundMin(now) });
+    if(state.active == null){ reflectState(); render(true); pace(); return; }
+    var now = Date.now(), startMs = state.active;
+    var elapsedH = (now - startMs)/HOUR;
+    var baseline = (typeof state.savedAvg5d === "number") ? state.savedAvg5d : cleanFiveDay(now);
+
+    // A likely forgotten Finish: longer than an hour AND more than twice the usual.
+    // Don't record yet — freeze it and let the user decide (survives reload).
+    if(elapsedH > 1 && elapsedH > 2*baseline){
+      state.pending = { start: startMs, end: now, baseline: baseline };
       state.active = null;
       saveState();
-      pruneOld(now);
+      if(timer) clearInterval(timer);
+      reflectState();
+      showPhantom();
+      return;
     }
+
+    state.sessions.push({ s: roundMin(startMs), e: roundMin(now) });
+    state.active = null;
+    saveState();
+    pruneOld(now);
     reflectState(); render(true); pace();
   }
   control.addEventListener("click", function(){
-    if(!ready) return;
+    if(!ready || state.pending) return;     // a pending choice blocks the control
     running() ? finish() : begin();
   });
+
+  // ---------- the "long sit" decision (forgotten Finish) ----------
+  var phantom    = document.getElementById("phantom");
+  var recActual  = document.getElementById("recActual");
+  var recAvg     = document.getElementById("recAvg");
+  var recActualT = document.getElementById("recActualTime");
+  var recAvgT    = document.getElementById("recAvgTime");
+
+  function fmtDur(mins){
+    mins = Math.max(0, Math.round(mins));
+    var h = Math.floor(mins/60), m = mins%60;
+    if(h>0 && m>0) return h+"h "+m+"m";
+    if(h>0) return h+"h";
+    return m+"m";
+  }
+
+  function showPhantom(){
+    var p = state.pending; if(!p) return;
+    var actualMin = (p.end - p.start)/MIN;
+    var avgMin = p.baseline*60;
+    recActualT.textContent = fmtDur(actualMin);
+    recAvgT.textContent = fmtDur(avgMin);
+    recActual.setAttribute("aria-label", "Record the actual time, "+fmtDur(actualMin));
+    recAvg.setAttribute("aria-label", "Record your average time, "+fmtDur(avgMin));
+    phantom.hidden = false;
+    requestAnimationFrame(function(){ phantom.classList.add("show"); });
+  }
+  function hidePhantom(){
+    phantom.classList.remove("show");
+    setTimeout(function(){ phantom.hidden = true; }, 350);
+  }
+  function resolvePhantom(useAverage){
+    var p = state.pending; if(!p) return;
+    var s, e;
+    if(useAverage){
+      e = roundMin(p.end);
+      s = e - Math.round(p.baseline*60)*MIN;     // a session as long as the saved average
+    }else{
+      s = roundMin(p.start); e = roundMin(p.end); // the real, full time
+    }
+    if(e > s) state.sessions.push({ s:s, e:e });  // (avg of ~0 records nothing)
+    state.pending = null;
+    saveState();
+    pruneOld(Date.now());
+    hidePhantom();
+    reflectState(); render(true); pace();
+  }
+  recActual.addEventListener("click", function(){ resolvePhantom(false); });
+  recAvg.addEventListener("click", function(){ resolvePhantom(true); });
 
   // ---------- live decay ticking ----------
   // Note: this interval only triggers re-renders; it never accumulates elapsed time.
@@ -461,6 +594,7 @@
     layout();          // measure the box and build the grid for this screen
     render(false);
     pace();
+    if(state.pending) showPhantom();   // an undecided long sit is waiting
   })();
 
   // re-measure when the viewport changes (rotation, resize, dynamic toolbars)
@@ -473,7 +607,10 @@
   // recompute whenever the app is seen again, so the chart reflects real elapsed
   // wall-clock time after a screen-off / backgrounded / bfcache-restored sit.
   function resume(){
-    if(ready){ pruneOld(Date.now()); reflectState(); layout(); render(true); pace(); }
+    if(ready){
+      pruneOld(Date.now()); reflectState(); layout(); render(true); pace();
+      if(state.pending) showPhantom();
+    }
   }
   document.addEventListener("visibilitychange", function(){
     if(!document.hidden) resume();

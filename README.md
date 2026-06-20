@@ -18,6 +18,15 @@ phone sleeps, the app is backgrounded, or the PWA is evicted from memory: reopen
 the start time and the recorded duration is still correct. (The app deliberately does **not**
 hold a Wake Lock — the screen is free to sleep.)
 
+## Forgotten the Finish button?
+
+If a sit runs longer than an hour **and** more than twice your usual amount (the 5-day average,
+snapshotted when the sit began so the in-progress time can't skew it), tapping **Finish**
+doesn't record straight away. Instead a blocking screen freezes the time and offers two
+choices: record the **actual** time, or — if you simply walked away and forgot to stop —
+record your **average** instead, so you still get fair credit without a phantom multi-hour
+entry. The pending choice is saved, so it survives closing the app and can't be skipped.
+
 ## Data
 
 History lives in the browser's `localStorage` under the key `mt_state`
