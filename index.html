@@ -598,12 +598,17 @@
     pace();
     if(state.pending) showPhantom();   // an undecided long sit is waiting
 
-    // TEMP preview: load with #longsit to see the overlay with sample times (remove later)
-    if(!state.pending && window.location && window.location.hash === "#longsit"){
-      previewSrc = { start: Date.now() - 275*MIN, end: Date.now(), baseline: 20/60 };
-      showPhantom(previewSrc);
-    }
+    if(!state.pending) maybePreview();   // TEMP: #longsit overlay preview (remove later)
   })();
+
+  // TEMP: open the overlay with sample times whenever the URL hash is #longsit,
+  // on load or when the hash changes on an already-open page (remove later)
+  function maybePreview(){
+    if(state.pending || !window.location || window.location.hash !== "#longsit") return;
+    previewSrc = { start: Date.now() - 275*MIN, end: Date.now(), baseline: 20/60 };
+    showPhantom(previewSrc);
+  }
+  window.addEventListener("hashchange", maybePreview);
 
   // re-measure when the viewport changes (rotation, resize, dynamic toolbars)
   function relayout(){
