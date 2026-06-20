@@ -168,27 +168,22 @@
   .phantom.show{opacity:1;}
   .phantom-card{
     width:100%; max-width:340px; text-align:center;
-    display:flex; flex-direction:column; align-items:center; gap:16px;
+    display:flex; flex-direction:column; align-items:center; gap:24px;
   }
-  .phantom-text{
+  .phantom-text, .phantom-sub{
     font-family: ui-serif, Georgia, "Times New Roman", serif;
-    font-size:20px; line-height:1.5; color:var(--ink); margin:0 0 4px;
-  }
-  .phantom-sub{
-    font-family: ui-serif, Georgia, serif; font-style:italic;
-    font-size:14.5px; line-height:1.5; color:var(--muted); margin:8px 0 0;
+    font-size:20px; line-height:1.5; color:var(--ink); margin:0;
   }
   .pbtn{
     appearance:none; cursor:pointer; width:100%;
     font-family: ui-serif, Georgia, "Times New Roman", serif;
-    color:var(--ink); background:transparent;
+    font-size:18px; color:var(--ink); background:transparent;
     border:1.5px solid var(--blue-dim); border-radius:40px;
     padding:15px 20px; letter-spacing:.02em;
     transition:border-color .3s ease, box-shadow .3s ease, transform .15s ease;
   }
   .pbtn:active{transform:scale(.98);}
-  .pbtn-primary{ font-size:19px; border-color:var(--blue); box-shadow:0 0 26px -10px var(--glow); }
-  .pbtn-secondary{ font-size:16px; opacity:.92; }
+  .pbtn-primary{ border-color:var(--blue); box-shadow:0 0 26px -10px var(--glow); }
   .pbtn:focus-visible{outline:2px solid var(--blue); outline-offset:4px;}
 
   @media (prefers-reduced-motion: reduce){
@@ -239,7 +234,7 @@
 
 <div id="phantom" class="phantom" role="dialog" aria-modal="true" aria-label="Record this sit" hidden>
   <div class="phantom-card">
-    <p class="phantom-text">Long sit. Did you forget to stop the timer?</p>
+    <p class="phantom-text">Long sit. Did you forget<br>to stop the timer?</p>
     <button id="recActual" class="pbtn pbtn-primary">Record <span id="recActualTime">0m</span></button>
     <p class="phantom-sub">Or use your average time instead.</p>
     <button id="recAvg" class="pbtn pbtn-secondary">Record <span id="recAvgTime">0m</span></button>
