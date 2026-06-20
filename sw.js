@@ -1,5 +1,5 @@
 /* Sitting — service worker. Bump CACHE when shipping changes so clients refresh. */
-var CACHE = "sitting-v11";
+var CACHE = "sitting-v12";
 var SHELL = [
   "./",
   "index.html",
