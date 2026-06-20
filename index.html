@@ -174,6 +174,7 @@
     font-family: ui-serif, Georgia, "Times New Roman", serif;
     font-size:20px; line-height:1.5; color:var(--ink); margin:0;
   }
+  .phantom-sub{ margin-top:16px; }   /* extra breathing room above the alt option */
   .pbtn{
     appearance:none; cursor:pointer; width:100%;
     font-family: ui-serif, Georgia, "Times New Roman", serif;
@@ -234,10 +235,10 @@
 
 <div id="phantom" class="phantom" role="dialog" aria-modal="true" aria-label="Record this sit" hidden>
   <div class="phantom-card">
-    <p class="phantom-text">Long sit. Did you forget<br>to stop the timer?</p>
+    <p class="phantom-text">Long sit.<br>Did you forget to stop the timer?</p>
     <button id="recActual" class="pbtn pbtn-primary">Record <span id="recActualTime">0m</span></button>
     <p class="phantom-sub">Or use your average time instead.</p>
-    <button id="recAvg" class="pbtn pbtn-secondary">Record <span id="recAvgTime">0m</span></button>
+    <button id="recAvg" class="pbtn pbtn-primary">Record <span id="recAvgTime">0m</span></button>
   </div>
 </div>
 
