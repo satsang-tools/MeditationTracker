@@ -17,10 +17,8 @@
     --bg2:#12151B;
     --ink:#EFE6D4;         /* warm cream: the lit label */
     --muted:#7C766B;       /* quiet headers / day captions */
-    --gold:#D6A24A;        /* warm light on the numerals */
-    --gold-dim:#A9823C;
-    --faint:#4F545E;       /* gridlines (more visible) */
-    --grid-base:#5E646F;
+    --faint:#646B78;       /* gridlines + right-edge ticks (more visible) */
+    --grid-base:#767E8B;
     --blue:#2E86FF;        /* the single electric current */
     --blue-soft:#5AA8FF;
     --blue-dim:rgba(90,150,255,0.55);
@@ -71,7 +69,7 @@
   svg.chart{flex:1 1 auto; width:100%; height:100%; min-height:0; display:block; overflow:visible;}
   .grid-line{stroke:var(--faint); stroke-width:1;}
   .grid-base{stroke:var(--grid-base); stroke-width:1.25;}
-  .tick{stroke:var(--gold-dim); stroke-width:1.25; opacity:.98;}
+  .tick{stroke:var(--faint); stroke-width:1.25;}   /* match the horizontal gridlines */
   .hour-label, .win-label{
     fill:var(--ink);
     font-size:12.5px;
@@ -529,7 +527,6 @@
   var recAvg     = document.getElementById("recAvg");
   var recActualT = document.getElementById("recActualTime");
   var recAvgT    = document.getElementById("recAvgTime");
-  var previewSrc = null;   // TEMP: sample values when previewing the overlay via #longsit
 
   function fmtDur(mins){
     mins = Math.max(0, Math.round(mins));
@@ -539,8 +536,8 @@
     return m+"m";
   }
 
-  function showPhantom(src){
-    var p = src || state.pending; if(!p) return;
+  function showPhantom(){
+    var p = state.pending; if(!p) return;
     var actualMin = (p.end - p.start)/MIN;
     var avgMin = p.baseline*60;
     recActualT.textContent = fmtDur(actualMin);
@@ -555,7 +552,6 @@
     setTimeout(function(){ phantom.hidden = true; }, 350);
   }
   function resolvePhantom(useAverage){
-    if(previewSrc){ previewSrc = null; hidePhantom(); return; }   // TEMP: preview is view-only
     var p = state.pending; if(!p) return;
     var s, e;
     if(useAverage){
@@ -593,18 +589,7 @@
     render(false);
     pace();
     if(state.pending) showPhantom();   // an undecided long sit is waiting
-
-    if(!state.pending) maybePreview();   // TEMP: #longsit overlay preview (remove later)
   })();
-
-  // TEMP: open the overlay with sample times whenever the URL hash is #longsit,
-  // on load or when the hash changes on an already-open page (remove later)
-  function maybePreview(){
-    if(state.pending || !window.location || window.location.hash !== "#longsit") return;
-    previewSrc = { start: Date.now() - 275*MIN, end: Date.now(), baseline: 20/60 };
-    showPhantom(previewSrc);
-  }
-  window.addEventListener("hashchange", maybePreview);
 
   // re-measure when the viewport changes (rotation, resize, dynamic toolbars)
   function relayout(){
