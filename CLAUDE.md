@@ -24,6 +24,10 @@ inline HTML/CSS/JS in `index.html`. All user data is local to the device.
 - **Deploy**: static site served by GitHub Pages ("Deploy from a branch", root) at
   `https://satsang-tools.github.io/MeditationTracker/`. A pushed change to the served branch redeploys
   automatically.
+- **Verify logic headlessly** (no browser is installable here): extract the first inline `<script>` from
+  `index.html` and run it in Node against a stubbed `document`/`localStorage`/`window`, driving real
+  button clicks and a controllable `Date.now`. This is how the `finish()` / overlay / persistence paths
+  get exercised without a browser; `node --check` catches syntax errors first.
 
 ## Critical convention: bump the service-worker cache
 
@@ -35,7 +39,7 @@ serving the old shell. This is the single most common way to ship a "silent no-o
 
 One IIFE holds the app; a tiny second `<script>` registers the service worker.
 
-- **Data model** — `localStorage["mt_state"] = { sessions:[{s,e}], active:startMs|null }`.
+- **Data model** — `localStorage["mt_state"] = { sessions:[{s,e}], active:startMs|null, savedAvg5d, pending }`.
   - **Time is timestamp-based, never counter-based.** `begin()` stores `Date.now()` as `active` and
     persists immediately; durations are always derived from wall-clock timestamps, so a long sit stays
     correct across screen-off, backgrounding, or PWA eviction. The `pace()` interval only triggers
@@ -63,9 +67,19 @@ One IIFE holds the app; a tiny second `<script>` registers the service worker.
   changed), then eases `disp` toward the target (easeOutCubic) and calls `drawVals`. `reflectState()`
   flips the control label between **Begin**/**Finish**.
 
+- **Forgotten-Finish guard** — to catch a sit left running by accident, `finish()` records straight away
+  only for a normal-length sit. If it ran **> 1h AND > 2× the saved 5-day average** (`savedAvg5d`,
+  snapshotted in `begin()` *before* the sit exists so the in-progress time can't inflate it;
+  `cleanFiveDay()` is the fallback baseline), the time is frozen into
+  `state.pending = {start,end,baseline}` and a blocking overlay (`#phantom`) asks the user to record the
+  **actual** time or their **average** instead — both via `resolvePhantom()`. `pending` is persisted, so
+  the choice survives reload (re-shown via `showPhantom()` on load and `resume()`); the control is inert
+  while it's outstanding.
+
 ## Visual language (CSS custom properties in `:root`)
 
 Cool near-black background (`--bg #0B0D11`); electric-blue glow (`--blue #2E86FF`) for the curve and the
-control ring; cream-white (`--ink #EFE6D4`) for the button label **and** all chart numbers/labels; warm
-`--gold-dim` only for the 10-minute ticks. Keep `manifest.webmanifest` `theme_color`/`background_color`
-and the `<meta name="theme-color">` in sync with `--bg`.
+control ring; cream-white (`--ink #EFE6D4`) for the button label **and** all chart numbers/labels. The
+horizontal gridlines and the 10-minute right-edge ticks share `--faint` (ticks are deliberately the same
+color as the lines). Keep `manifest.webmanifest` `theme_color`/`background_color` and the
+`<meta name="theme-color">` in sync with `--bg`.
