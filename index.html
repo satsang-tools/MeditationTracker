@@ -65,7 +65,7 @@
   }
   .head-label{
     font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
-    font-size:10.5px; letter-spacing:.22em; text-transform:uppercase;
+    font-size:15.75px; letter-spacing:.22em; text-transform:uppercase;
     color:var(--muted);
   }
   svg.chart{flex:1 1 auto; width:100%; height:100%; min-height:0; display:block; overflow:visible;}
@@ -367,7 +367,7 @@
         var t = document.createElementNS("http://www.w3.org/2000/svg","text");
         t.setAttribute("x", padL-8); t.setAttribute("y", y+6.5);
         t.setAttribute("text-anchor","end"); t.setAttribute("class","hour-label");
-        t.textContent = h + "h";
+        t.textContent = h;
         gridLayer.appendChild(t);
       }
     }
@@ -384,7 +384,7 @@
         gridLayer.appendChild(tick);
       }
     }
-    var labels = ["5d","4d","3d","2d","1d"];  // left -> right
+    var labels = ["5","4","3","2","1"];  // left -> right (trailing days)
     winLayer.innerHTML = "";
     for(var i=0;i<NWIN;i++){
       var t2 = document.createElementNS("http://www.w3.org/2000/svg","text");
