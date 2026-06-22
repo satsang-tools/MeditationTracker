@@ -26,6 +26,8 @@
     --area-bot:rgba(46,134,255,0.0);
     --glow:rgba(46,134,255,0.55);
     --glow-strong:rgba(70,150,255,0.85);
+    --orange:#FF8A2E;      /* Finish state — complement of --blue, equal intensity */
+    --glow-orange:rgba(255,138,46,0.55);
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
   html,body{margin:0;padding:0;height:100%;background:var(--bg);}
@@ -126,15 +128,11 @@
     transition:border-color .5s ease, box-shadow .5s ease;
   }
   .control.running .ring{
-    border-color:var(--blue);
-    animation:breathe 7s ease-in-out infinite;
+    border-color:var(--orange);
+    box-shadow:0 0 24px -8px var(--glow-orange), inset 0 0 28px -16px var(--glow-orange);
   }
   .control .label{position:relative; z-index:1;}
   .control:focus-visible{outline:2px solid var(--blue); outline-offset:6px;}
-  @keyframes breathe{
-    0%,100%{box-shadow:0 0 28px -6px var(--glow), inset 0 0 30px -18px var(--glow); border-color:#4a8cff;}
-    50%{box-shadow:0 0 56px 2px var(--glow-strong), inset 0 0 34px -14px var(--glow); border-color:#6aa6ff;}
-  }
 
   /* ---- quiet utility row ---- */
   .util{
@@ -186,7 +184,6 @@
   .pbtn:focus-visible{outline:2px solid var(--blue); outline-offset:4px;}
 
   @media (prefers-reduced-motion: reduce){
-    .control.running .ring{animation:none; box-shadow:0 0 26px -6px var(--glow);}
     *{transition:none !important;}
   }
 </style>
@@ -474,6 +471,26 @@
 
   function running(){ return state.active != null; }
 
+  // a soft click for button presses — synthesized with Web Audio so there is no
+  // asset to cache; the context is created/resumed inside the user gesture (iOS)
+  var actx = null;
+  function playClick(){
+    try{
+      if(!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if(actx.state === "suspended") actx.resume();
+      var t = actx.currentTime;
+      var osc = actx.createOscillator(), g = actx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(620, t);
+      osc.frequency.exponentialRampToValueAtTime(320, t + 0.05);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.12, t + 0.004);  // quick soft attack
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06); // short decay
+      osc.connect(g); g.connect(actx.destination);
+      osc.start(t); osc.stop(t + 0.07);
+    }catch(e){ /* audio unavailable -> stay silent */ }
+  }
+
   function reflectState(){
     var run = running();
     control.classList.toggle("running", run);
@@ -518,6 +535,7 @@
   }
   control.addEventListener("click", function(){
     if(!ready || state.pending) return;     // a pending choice blocks the control
+    playClick();                            // soft click on Begin and Finish
     running() ? finish() : begin();
   });
 
