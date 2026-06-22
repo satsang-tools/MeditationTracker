@@ -12,8 +12,8 @@
     </radialGradient>
   </defs>
 
-  <!-- blue background: the moving-average line color -->
-  <rect width="512" height="512" fill="#2E86FF"/>
+  <!-- dark blue background -->
+  <rect width="512" height="512" fill="#1A2A6C"/>
 
   <!-- the warm light the flame throws -->
   <rect width="512" height="512" fill="url(#glow)"/>
