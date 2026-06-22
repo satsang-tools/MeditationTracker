@@ -11,7 +11,7 @@ OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "icons")
 os.makedirs(OUT, exist_ok=True)
 SS = 4  # supersample for clean edges
 
-BG    = (0x1A, 0x1A, 0x40)   # dark blue background
+BG    = (0x1A, 0x2A, 0x6C)   # dark blue background
 FLAME = (0xFF, 0x8A, 0x2E)   # the orange flame
 CORE  = (0xFF, 0xE9, 0xC8)   # warm core
 GLOW  = (0xFF, 0x8A, 0x2E)   # the light it throws

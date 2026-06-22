@@ -74,12 +74,12 @@
   .tick{stroke:var(--faint); stroke-width:1.25;}   /* match the horizontal gridlines */
   .hour-label, .win-label{
     fill:var(--ink);
-    font-size:12.5px;
+    font-size:18.75px;     /* 50% larger than before (was 12.5) */
     font-family: ui-serif, Georgia, "Times New Roman", serif;
     font-variant-numeric:tabular-nums;
     letter-spacing:.02em;
   }
-  .win-label{font-size:12px;}
+  .win-label{font-size:18px;}
   .area{fill:url(#areaGrad);}
   .curve{
     fill:none; stroke:var(--blue); stroke-width:2.5;
@@ -344,7 +344,7 @@
   // measured from the SVG's real pixel size and the viewBox is kept 1:1 with those
   // pixels, so strokes and labels stay crisp and undistorted at any size.
   var svgEl = document.querySelector("svg.chart");
-  var W=360, H=480, padL=28, padR=14, padT=12, padB=30;
+  var W=360, H=480, padL=38, padR=14, padT=12, padB=30;
   var plotW, plotH;
   function recalc(){ plotW = W-padL-padR; plotH = H-padT-padB; }
   recalc();
@@ -365,9 +365,9 @@
       gridLayer.appendChild(line);
       if(h>0){
         var t = document.createElementNS("http://www.w3.org/2000/svg","text");
-        t.setAttribute("x", padL-7); t.setAttribute("y", y+3.5);
+        t.setAttribute("x", padL-8); t.setAttribute("y", y+6.5);
         t.setAttribute("text-anchor","end"); t.setAttribute("class","hour-label");
-        t.textContent = h;
+        t.textContent = h + "h";
         gridLayer.appendChild(t);
       }
     }
