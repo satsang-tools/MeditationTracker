@@ -585,8 +585,8 @@
     hidePhantom();
     reflectState(); render(true); pace();
   }
-  recActual.addEventListener("click", function(){ resolvePhantom(false); });
-  recAvg.addEventListener("click", function(){ resolvePhantom(true); });
+  recActual.addEventListener("click", function(){ playClick(); resolvePhantom(false); });
+  recAvg.addEventListener("click", function(){ playClick(); resolvePhantom(true); });
 
   // ---------- live decay ticking ----------
   // Note: this interval only triggers re-renders; it never accumulates elapsed time.
