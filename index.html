@@ -89,6 +89,23 @@
   .node{fill:var(--bg); stroke:var(--blue); stroke-width:1.75;}
   .node-today{fill:var(--blue-soft); stroke:none; filter:url(#glow);}
 
+  /* ---- 24-hour ticker tape (each sit a blue bar; right = now, left = 24h ago) ---- */
+  .ticker{
+    flex:0 0 auto;
+    position:relative;
+    height:20px;
+    margin:8px 0 2px;
+    border:1px solid var(--faint);   /* gray outline */
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .ticker-bars{position:absolute; inset:0;}
+  .ticker-bars i{
+    position:absolute; top:50%; transform:translateY(-50%);
+    height:3px; min-width:2px;
+    background:var(--blue); border-radius:2px;
+  }
+
   /* ---- the still middle: the bottom third holds the control ---- */
   .middle{
     flex:0 0 33.333%;
@@ -216,6 +233,7 @@
       <g id="nodeLayer"></g>
       <g id="winLayer"></g>
     </svg>
+    <div class="ticker"><div id="tickerBars" class="ticker-bars"></div></div>
   </div>
 
   <div class="middle">
@@ -444,12 +462,33 @@
     }
   }
 
+  // ---------- 24-hour ticker tape ----------
+  // Each sit is a blue bar; the strip spans the last 24h (right = now, left = 24h ago),
+  // so bars slide left over time and a sit leaving the left edge is exactly the moment it
+  // stops counting toward today's (1-day) average above. Position/width are percentages,
+  // so the strip is responsive without measuring pixels.
+  var tickerBars = document.getElementById("tickerBars");
+  function drawTicker(now){
+    var lo = now - DAY;
+    var all = state.active ? state.sessions.concat([{s:state.active, e:now}]) : state.sessions;
+    var out = "";
+    for(var i=0;i<all.length;i++){
+      var a = Math.max(all[i].s, lo), b = Math.min(all[i].e, now);
+      if(b > a){
+        out += '<i style="left:'+((a-lo)/DAY*100).toFixed(3)+'%;width:'+((b-a)/DAY*100).toFixed(3)+'%"></i>';
+      }
+    }
+    tickerBars.innerHTML = out;
+  }
+
   // ---------- animated rendering ----------
   var disp = [0,0,0,0,0];
   var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
   function render(animate){
-    var target = computeWindows(Date.now());
+    var now = Date.now();
+    var target = computeWindows(now);
+    drawTicker(now);
     var newTop = computeTop(target);             // adapt the vertical scale to the data
     if(newTop !== TOP){ TOP = newTop; buildGrid(); }
     if(!animate || reduce){ disp = target.slice(); drawVals(disp); return; }
