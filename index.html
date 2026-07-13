@@ -138,6 +138,9 @@
     width:164px; height:164px; border-radius:50%;
     background:transparent;
     color:var(--ink);
+    touch-action:manipulation;          /* no tap delay / double-tap zoom */
+    -webkit-touch-callout:none;         /* no long-press callout stealing the tap */
+    -webkit-user-select:none; user-select:none;
     font-family: ui-serif, Georgia, "Times New Roman", serif;
     font-size:22px; letter-spacing:.04em;
     position:relative;
@@ -579,10 +582,29 @@
     pruneOld(now);
     reflectState(); render(true); pace();
   }
-  control.addEventListener("click", function(){
+  function activate(){
     if(!ready || state.pending) return;     // a pending choice blocks the control
     playClick();                            // soft click on Begin and Finish
     running() ? finish() : begin();
+  }
+  // React to the press itself (any duration) via Pointer Events with capture — not
+  // the stricter synthetic click — so quick taps, long presses, and a little finger
+  // drift all register reliably on touch.
+  var pressed = false;
+  control.addEventListener("pointerdown", function(e){
+    if(e.button != null && e.button > 0) return;      // primary button / touch only
+    pressed = true;
+    try{ control.setPointerCapture(e.pointerId); }catch(_){}
+  });
+  control.addEventListener("pointerup", function(){
+    if(!pressed) return;
+    pressed = false;
+    activate();
+  });
+  control.addEventListener("pointercancel", function(){ pressed = false; });
+  control.addEventListener("contextmenu", function(e){ e.preventDefault(); }); // no long-press menu
+  control.addEventListener("keydown", function(e){     // keyboard accessibility
+    if(e.key === "Enter" || e.key === " " || e.key === "Spacebar"){ e.preventDefault(); activate(); }
   });
 
   // ---------- the "long sit" decision (forgotten Finish) ----------
